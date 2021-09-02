@@ -1,0 +1,94 @@
+/* Code for D6T Sensor Test with ESP8266,set cursor(0,5) use pot.
+   For ESP it is necessary to use 2 resistors (4.7KOhm) in parallel between vcc and SCL and SDA ports */
+#include <Wire.h>
+#include <LiquidCrystal.h>
+#define D6T_addr 0x0A
+#define D6T_cmd 0x4C
+int trigPin = 9;
+int echoPin = 10;
+const int Led=13;
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+
+int rbuf[35];
+double tdata[16];
+double t_PTAT;
+float fer=1.8+36;
+int led1 =7;
+int led2=8;
+void setup(){ 
+  Wire.begin();
+   pinMode(led1, OUTPUT);
+     pinMode(led2, OUTPUT);
+      pinMode(trigPin, OUTPUT);
+ pinMode(echoPin, INPUT);
+ pinMode(Led,OUTPUT);
+  Serial.begin(9600);
+}
+
+void loop(){
+  digitalWrite(Led,LOW);
+     long duration, distance;
+  digitalWrite(trigPin,HIGH);
+  delayMicroseconds(1000);
+  digitalWrite(trigPin, LOW);
+  duration=pulseIn(echoPin, HIGH);
+  distance =(duration/2)/20;
+  Serial.print(distance);
+  Serial.println("CM");
+  delay(10);
+
+  if(distance<=35)
+{
+  int z=0, i=0, j=0;
+  int writeStatus;
+  lcd.clear();
+  Wire.beginTransmission(D6T_addr);
+  Wire.write(D6T_cmd);
+  Wire.endTransmission();
+  delay(100);
+ lcd.setCursor(0,1);
+  writeStatus = Wire.endTransmission(false);
+  if(writeStatus != 0){
+    Serial.println("Writing failed");
+    return;
+    delay(1000);
+  }
+  Serial.println("writing succeded");
+
+  Wire.requestFrom(D6T_addr, 35);
+  for (z=0;z<35;z++){
+    rbuf[z]=Wire.read();
+  }
+  t_PTAT = (rbuf[0]+(rbuf[1]<<8))*0.1;
+
+  for(i=0; i<16; i++){
+    tdata[i] = (rbuf[(i*2+2)]+(rbuf[(i*2+3)]<<8))*0.1;
+  }
+  
+  /* Serial Port Array Presentation */     
+  int cont = 0;
+      Serial.println();
+      Serial.println();
+      for(i=0; i<1; i++){
+       {
+        
+          Serial.print(tdata[i]+ cont);
+          digitalWrite(Led,HIGH);
+          lcd.print("Temp:");
+          lcd.print(tdata[i]*1.8+33.6 + cont);
+
+          Serial.print(",");
+          lcd.print(" F");
+         
+        }
+        Serial.println();
+        cont++;
+      }
+
+  
+  Serial.println("");
+  delay(2000);
+}
+  lcd.print(" WELCOME ");
+
+}
